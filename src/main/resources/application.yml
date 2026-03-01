@@ -19,10 +19,10 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
 
-  # H2控制台 (开发环境)
+  # H2控制台 (仅开发环境启用)
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
 # 服务器配置
@@ -60,7 +60,7 @@ alert:
   # 飞书通知配置
   feishu:
     enabled: true
-    webhook-url: https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxxx
+    webhook-url: ${FEISHU_WEBHOOK:}
     # 是否发送详细分析结果
     send-detail: true
 
@@ -81,4 +81,11 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
+
+# JWT配置
+jwt:
+  # JWT密钥 (生产环境必须使用环境变量)
+  secret: ${JWT_SECRET:your-secret-key-must-be-at-least-32-characters-long-for-hs256}
+  # Token过期时间 (毫秒) - 默认24小时
+  expiration: ${JWT_EXPIRATION:86400000}
