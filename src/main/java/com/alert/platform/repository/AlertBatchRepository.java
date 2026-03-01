@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -58,4 +61,14 @@ public interface AlertBatchRepository extends JpaRepository<AlertBatch, Long> {
      * 统计指定状态的批次数量 (修复全表扫描问题)
      */
     long countByStatus(String status);
+
+    /**
+     * 分页查询所有批次 (修复内存分页问题)
+     */
+    Page<AlertBatch> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * 根据状态分页查询批次 (修复内存分页问题)
+     */
+    Page<AlertBatch> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
 }

@@ -9,7 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Disposable;
 
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -111,20 +113,23 @@ public class FeishuNotificationService {
     }
 
     /**
-     * 发送到飞书
+     * 发送到飞书 (修复 WebClient.block() 阻塞问题)
      */
-    private void sendToFeishu(Map<String, Object> card) {
+    private Disposable sendToFeishu(Map<String, Object> card) {
         Map<String, Object> request = new HashMap<>();
         request.put("msg_type", "interactive");
         request.put("card", card);
 
-        webClient.post()
+        return webClient.post()
                 .uri(feishuConfig.getWebhookUrl())
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnError(error -> log.error("发送飞书通知失败", error))
-                .block();
+                .timeout(Duration.ofSeconds(10))
+                .subscribe(
+                        response -> log.debug("飞书响应: {}", response),
+                        error -> log.error("发送飞书通知失败", error)
+                );
     }
 }

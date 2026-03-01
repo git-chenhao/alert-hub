@@ -7,6 +7,7 @@ import com.alert.platform.repository.AlertRepository;
 import com.alert.platform.service.AlertAggregationService;
 import com.alert.platform.service.AlertDeduplicationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Webhook告警接收Controller
@@ -166,10 +166,10 @@ public class WebhookController {
     }
 
     /**
-     * 通用告警创建接口
+     * 通用告警创建接口 (添加输入验证)
      */
     @PostMapping("/create")
-    public ApiResponse<?> createAlert(@RequestBody WebhookAlertRequest request) {
+    public ApiResponse<?> createAlert(@Valid @RequestBody WebhookAlertRequest request) {
         try {
             log.info("接收到通用告警: alertname={}, severity={}",
                     request.getAlertname(), request.getSeverity());

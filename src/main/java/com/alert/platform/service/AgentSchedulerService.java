@@ -105,9 +105,10 @@ public class AgentSchedulerService {
     }
 
     /**
-     * 调用Sub-Agent
+     * 调用Sub-Agent (修复 block() 阻塞问题 - 添加超时)
      */
     private JsonNode callSubAgent(Map<String, Object> request) {
+        long timeoutSeconds = agentConfig.getTimeoutSeconds() + agentConfig.getMaxRetries() * 2L + 10L;
         return webClient.post()
                 .uri(agentConfig.getEndpoint())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +121,7 @@ public class AgentSchedulerService {
                         Duration.ofSeconds(2)
                 ).doBeforeRetry(signal -> log.warn("重试Agent调用: attempt={}",
                         signal.totalRetries() + 1)))
-                .block();
+                .block(Duration.ofSeconds(timeoutSeconds));
     }
 
     /**

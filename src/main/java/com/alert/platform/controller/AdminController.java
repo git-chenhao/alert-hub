@@ -10,10 +10,13 @@ import com.alert.platform.repository.AlertBatchRepository;
 import com.alert.platform.repository.AlertRepository;
 import com.alert.platform.repository.AggregationRuleRepository;
 import com.alert.platform.service.AgentSchedulerService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +41,7 @@ public class AdminController {
     private final AlertBatchRepository batchRepository;
     private final AggregationRuleRepository ruleRepository;
     private final AgentSchedulerService agentSchedulerService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 获取告警列表
@@ -79,27 +83,36 @@ public class AdminController {
     }
 
     /**
-     * 获取批次列表
+     * 获取批次列表 (修复内存分页问题)
      */
     @GetMapping("/batches")
-    public ApiResponse<List<BatchDTO>> getBatches(
+    public ApiResponse<Map<String, Object>> getBatches(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status) {
 
         try {
-            List<AlertBatch> batches;
+            Pageable pageable = PageRequest.of(
+                    page, size,
+                    Sort.by(Sort.Direction.DESC, "createdAt")
+            );
+
+            Page<AlertBatch> batchPage;
             if (status != null && !status.isEmpty()) {
-                batches = batchRepository.findByStatusOrderByCreatedAtDesc(status);
+                batchPage = batchRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
             } else {
-                batches = batchRepository.findAll(
-                        Sort.by(Sort.Direction.DESC, "createdAt")
-                );
+                batchPage = batchRepository.findAllByOrderByCreatedAtDesc(pageable);
             }
 
-            List<BatchDTO> batchDTOs = batches.stream()
+            Map<String, Object> result = new HashMap<>();
+            result.put("content", batchPage.getContent().stream()
                     .map(this::convertToBatchDTO)
-                    .toList();
+                    .toList());
+            result.put("totalElements", batchPage.getTotalElements());
+            result.put("totalPages", batchPage.getTotalPages());
+            result.put("currentPage", page);
 
-            return ApiResponse.success(batchDTOs);
+            return ApiResponse.success(result);
 
         } catch (Exception e) {
             log.error("获取批次列表失败", e);
@@ -206,7 +219,7 @@ public class AdminController {
     }
 
     /**
-     * 转换为DTO
+     * 转换为DTO (修复空指针问题 - 添加 labels 字段)
      */
     private AlertDTO convertToDTO(Alert alert) {
         return AlertDTO.builder()
@@ -216,12 +229,28 @@ public class AdminController {
                 .severity(alert.getSeverity())
                 .alertname(alert.getAlertname())
                 .instance(alert.getInstance())
+                .labels(parseLabels(alert.getLabels()))
                 .message(alert.getMessage())
                 .status(alert.getStatus())
                 .batchId(alert.getBatchId())
                 .createdAt(alert.getCreatedAt())
                 .updatedAt(alert.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 解析标签JSON字符串
+     */
+    private Map<String, String> parseLabels(String labelsJson) {
+        try {
+            if (labelsJson == null || labelsJson.isEmpty()) {
+                return new HashMap<>();
+            }
+            return objectMapper.readValue(labelsJson, new TypeReference<Map<String, String>>() {});
+        } catch (Exception e) {
+            log.warn("解析标签失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 
     /**
