@@ -2,83 +2,84 @@ spring:
   application:
     name: alert-hub
 
-  # 数据源配置
+  # 数据源配置 - 使用环境变量
   datasource:
-    url: jdbc:h2:mem:alertdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${DATABASE_URL:jdbc:h2:mem:alertdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
 
   # JPA配置
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
 
-  # H2控制台 (开发环境)
+  # H2控制台 - 仅开发环境启用
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
 # 服务器配置
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 # 告警聚合配置
 alert:
+  # 安全配置
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+    # API Key用于认证，生产环境必须通过环境变量设置
+    api-key: ${ALERT_API_KEY:}
+
   # 去重配置
   deduplication:
     enabled: true
-    # 去重窗口时间 (分钟)
     window-minutes: 10
 
   # 聚合配置
   aggregation:
-    # 分组等待时间 (秒)
     group-wait-seconds: 30
-    # 最大聚合数量
     max-count: 50
-    # 最大等待时间 (秒)
     max-wait-seconds: 300
-    # 分组标签 (逗号分隔)
     group-by-labels: "severity,alertname"
 
   # Sub-Agent配置 (A2A协议)
   agent:
-    # Sub-Agent端点
-    endpoint: http://localhost:9001/api/agent/analyze
-    # 请求超时 (秒)
+    endpoint: ${AGENT_ENDPOINT:http://localhost:9001/api/agent/analyze}
     timeout-seconds: 60
-    # 最大重试次数
     max-retries: 3
 
-  # 飞书通知配置
+  # 飞书通知配置 - 使用环境变量
   feishu:
-    enabled: true
-    webhook-url: https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxxx
-    # 是否发送详细分析结果
+    enabled: ${FEISHU_ENABLED:false}
+    webhook-url: ${FEISHU_WEBHOOK_URL:}
     send-detail: true
 
 # 日志配置
 logging:
   level:
-    com.alert.platform: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.alert.platform: ${LOG_LEVEL:INFO}
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
-# 管理端点配置
+# 管理端点配置 - 限制暴露的端点
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      # 生产环境不显示详细信息
+      show-details: ${HEALTH_SHOW_DETAILS:never}
+  # 安全配置 - 仅允许内部访问
+  server:
+    port: ${MANAGEMENT_PORT:8081}

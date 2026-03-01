@@ -84,14 +84,15 @@ public class AlertAggregationService {
             alert.setStatus("AGGREGATING");
             alertRepository.save(alert);
 
-            // 更新批次告警数量
-            batch.setAlertCount(batch.getAlertCount() + 1);
+            // 使用原子操作增加批次告警计数，解决并发问题
+            batchRepository.incrementAlertCount(batch.getId());
+
+            // 重新获取批次以检查条件
+            batch = batchRepository.findById(batch.getId()).orElse(batch);
 
             // 检查是否达到聚合条件
             if (shouldDispatch(batch)) {
                 dispatchBatch(batch);
-            } else {
-                batchRepository.save(batch);
             }
 
             log.debug("告警已添加到聚合批次: batchKey={}, alertId={}", batchKey, alert.getId());
@@ -165,12 +166,8 @@ public class AlertAggregationService {
             batch.setDispatchedAt(LocalDateTime.now());
             batchRepository.save(batch);
 
-            // 更新批次中所有告警的状态
-            List<Alert> alerts = alertRepository.findByBatchIdOrderByCreatedAtAsc(batch.getId());
-            alerts.forEach(alert -> {
-                alert.setStatus("DISPATCHED");
-                alertRepository.save(alert);
-            });
+            // 使用批量更新代替循环更新，解决N+1问题
+            alertRepository.updateStatusByBatchId(batch.getId(), "DISPATCHED");
 
             log.info("批次已派发: batchKey={}, alertCount={}",
                     batch.getBatchKey(), batch.getAlertCount());

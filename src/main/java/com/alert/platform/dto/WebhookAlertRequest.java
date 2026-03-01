@@ -1,11 +1,14 @@
 package com.alert.platform.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,32 +27,39 @@ public class WebhookAlertRequest {
     /**
      * 告警名称
      */
+    @NotBlank(message = "告警名称不能为空")
+    @Size(max = 255, message = "告警名称长度不能超过255个字符")
     private String alertname;
 
     /**
      * 告警级别
      */
+    @Size(max = 20, message = "告警级别长度不能超过20个字符")
     private String severity;
 
     /**
      * 实例标识
      */
+    @Size(max = 255, message = "实例标识长度不能超过255个字符")
     private String instance;
 
     /**
      * 告警消息/内容
      */
+    @Size(max = 65535, message = "告警消息长度不能超过65535个字符")
     private String message;
 
     /**
      * 告警标签集合
      */
-    private Map<String, String> labels;
+    @Builder.Default
+    private Map<String, String> labels = new HashMap<>();
 
     /**
      * 告警注解集合
      */
-    private Map<String, String> annotations;
+    @Builder.Default
+    private Map<String, String> annotations = new HashMap<>();
 
     /**
      * 告警开始时间
@@ -66,10 +76,26 @@ public class WebhookAlertRequest {
     /**
      * 告警状态 (firing, resolved)
      */
+    @Size(max = 20, message = "状态长度不能超过20个字符")
     private String status;
 
     /**
      * 告警来源 (prometheus, grafana, zabbix, generic)
      */
+    @Size(max = 50, message = "来源长度不能超过50个字符")
     private String source;
+
+    /**
+     * 安全获取标签
+     */
+    public Map<String, String> getLabels() {
+        return labels != null ? labels : new HashMap<>();
+    }
+
+    /**
+     * 安全获取注解
+     */
+    public Map<String, String> getAnnotations() {
+        return annotations != null ? annotations : new HashMap<>();
+    }
 }

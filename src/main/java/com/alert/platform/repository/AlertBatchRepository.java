@@ -43,4 +43,19 @@ public interface AlertBatchRepository extends JpaRepository<AlertBatch, Long> {
         "AND b.createdAt < :threshold ORDER BY b.createdAt ASC"
     )
     List<AlertBatch> findBatchesReadyToAggregate(LocalDateTime threshold);
+
+    /**
+     * 原子性增加批次告警计数
+     * 使用数据库级别的原子操作，避免并发问题
+     */
+    @org.springframework.data.jpa.repository.Query(
+        "UPDATE AlertBatch b SET b.alertCount = b.alertCount + 1 WHERE b.id = :batchId"
+    )
+    @org.springframework.data.jpa.repository.Modifying
+    int incrementAlertCount(@org.springframework.data.repository.query.Param("batchId") Long batchId);
+
+    /**
+     * 统计指定状态的批次数量
+     */
+    long countByStatus(String status);
 }

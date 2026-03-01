@@ -61,4 +61,21 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     @Query("SELECT a FROM Alert a WHERE a.status = 'PENDING' " +
            "ORDER BY a.createdAt ASC")
     List<Alert> findPendingAlerts();
+
+    /**
+     * 批量更新批次中告警的状态
+     */
+    @Query("UPDATE Alert a SET a.status = :status, a.updatedAt = CURRENT_TIMESTAMP WHERE a.batchId = :batchId")
+    @org.springframework.data.jpa.repository.Modifying
+    int updateStatusByBatchId(@Param("batchId") Long batchId, @Param("status") String status);
+
+    /**
+     * 分页查询指定状态的告警
+     */
+    org.springframework.data.domain.Page<Alert> findByStatus(String status, org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * 统计指定状态的告警数量
+     */
+    long countByStatus(String status);
 }

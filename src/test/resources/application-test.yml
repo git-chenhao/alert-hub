@@ -1,0 +1,44 @@
+# 测试环境配置
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  h2:
+    console:
+      enabled: false
+
+# 测试环境禁用安全检查
+alert:
+  security:
+    enabled: false
+  deduplication:
+    enabled: true
+    window-minutes: 10
+  aggregation:
+    group-wait-seconds: 30
+    max-count: 50
+    max-wait-seconds: 300
+    group-by-labels: "severity,alertname"
+  agent:
+    endpoint: http://localhost:9001/api/agent/analyze
+    timeout-seconds: 60
+    max-retries: 3
+  feishu:
+    enabled: false
+
+logging:
+  level:
+    com.alert.platform: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details: always

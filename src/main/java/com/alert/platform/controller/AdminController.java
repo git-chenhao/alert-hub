@@ -49,6 +49,9 @@ public class AdminController {
             @RequestParam(required = false) String status) {
 
         try {
+            // 限制分页大小，防止过大请求
+            size = Math.min(size, 100);
+
             org.springframework.data.domain.Pageable pageable = PageRequest.of(
                     page, size,
                     Sort.by(Sort.Direction.DESC, "createdAt")
@@ -56,13 +59,8 @@ public class AdminController {
 
             Page<Alert> alertPage;
             if (status != null && !status.isEmpty()) {
-                // 使用repository的findByStatus方法
-                List<Alert> alerts = alertRepository.findByStatus(status);
-                // 手动分页
-                int start = (int) pageable.getOffset();
-                int end = Math.min(start + pageable.getPageSize(), alerts.size());
-                List<Alert> pagedAlerts = alerts.subList(start, end);
-                alertPage = new org.springframework.data.domain.PageImpl<>(pagedAlerts, pageable, alerts.size());
+                // 使用数据库分页代替内存分页
+                alertPage = alertRepository.findByStatus(status, pageable);
             } else {
                 alertPage = alertRepository.findAll(pageable);
             }
