@@ -2,12 +2,15 @@ package com.alert.platform.dto;
 
 import com.alert.platform.entity.Alert;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -22,6 +25,8 @@ import java.util.Map;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AlertDTO {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private Long id;
     private String fingerprint;
@@ -60,7 +65,13 @@ public class AlertDTO {
      * 解析标签JSON字符串
      */
     private static Map<String, String> parseLabels(String labelsJson) {
-        // 简化处理，实际应使用ObjectMapper
-        return null;
+        try {
+            if (labelsJson == null || labelsJson.isEmpty()) {
+                return new HashMap<>();
+            }
+            return objectMapper.readValue(labelsJson, new TypeReference<Map<String, String>>() {});
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
     }
 }

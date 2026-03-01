@@ -56,13 +56,8 @@ public class AdminController {
 
             Page<Alert> alertPage;
             if (status != null && !status.isEmpty()) {
-                // 使用repository的findByStatus方法
-                List<Alert> alerts = alertRepository.findByStatus(status);
-                // 手动分页
-                int start = (int) pageable.getOffset();
-                int end = Math.min(start + pageable.getPageSize(), alerts.size());
-                List<Alert> pagedAlerts = alerts.subList(start, end);
-                alertPage = new org.springframework.data.domain.PageImpl<>(pagedAlerts, pageable, alerts.size());
+                // 使用数据库层面分页 (修复 N+1 查询 + 内存分页问题)
+                alertPage = alertRepository.findByStatus(status, pageable);
             } else {
                 alertPage = alertRepository.findAll(pageable);
             }
@@ -190,13 +185,11 @@ public class AdminController {
             long totalAlerts = alertRepository.count();
             long totalBatches = batchRepository.count();
 
-            long pendingAlerts = alertRepository.findAll().stream()
-                    .filter(a -> "PENDING".equals(a.getStatus()))
-                    .count();
+            // 使用 COUNT 查询替代全表扫描 (修复全表扫描问题)
+            long pendingAlerts = alertRepository.countByStatus("PENDING");
 
-            long completedBatches = batchRepository.findAll().stream()
-                    .filter(b -> "COMPLETED".equals(b.getStatus()))
-                    .count();
+            // 添加完成的批次统计查询到 Repository
+            long completedBatches = batchRepository.countByStatus("COMPLETED");
 
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalAlerts", totalAlerts);

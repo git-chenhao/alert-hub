@@ -84,19 +84,25 @@ public class AlertAggregationService {
             alert.setStatus("AGGREGATING");
             alertRepository.save(alert);
 
-            // 更新批次告警数量
-            batch.setAlertCount(batch.getAlertCount() + 1);
+            // 使用原子增量更新告警数量 (修复并发计数问题)
+            batchRepository.incrementAlertCount(batch.getId());
+            batchRepository.flush();
+
+            // 重新加载获取最新计数
+            batch = batchRepository.findById(batch.getId()).orElse(batch);
 
             // 检查是否达到聚合条件
             if (shouldDispatch(batch)) {
                 dispatchBatch(batch);
-            } else {
-                batchRepository.save(batch);
             }
 
             log.debug("告警已添加到聚合批次: batchKey={}, alertId={}", batchKey, alert.getId());
         } catch (Exception e) {
             log.error("添加到聚合批次失败", e);
+            // 添加失败重试标记
+            alert.setStatus("FAILED");
+            alertRepository.save(alert);
+            throw new RuntimeException("添加到聚合批次失败", e);
         }
     }
 
